@@ -1,0 +1,6 @@
+# Optional: enables theatrical now-playing/upcoming lists and movie review scores.
+TMDB_READ_ACCESS_TOKEN=
+
+# Required to send password-reset email. Use a sender verified in Resend.
+RESEND_API_KEY=
+AUTH_FROM_EMAIL=
