@@ -7,6 +7,7 @@ export async function GET(request: Request) {
     genre: params.get("genre") || undefined,
     q: params.get("q") || undefined,
     country: params.get("country") || undefined,
+    industry: params.get("industry") || undefined,
   });
   return Response.json(catalog, {
     headers: { "Cache-Control": catalog.live ? "public, max-age=60, s-maxage=600" : "no-store" },

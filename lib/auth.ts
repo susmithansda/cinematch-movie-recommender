@@ -1,7 +1,7 @@
 import { env } from "cloudflare:workers";
 import { getChatGPTUser } from "@/app/chatgpt-auth";
 
-export type AppUser = { id: string; name: string; email: string; provider: "email" | "chatgpt" };
+export type AppUser = { id: string; name: string; email: string; provider: "email" | "chatgpt" | "google" | "facebook" };
 type UserRow = { id: string; name: string; email: string; password_hash: string };
 const SESSION_SECONDS = 60 * 60 * 24 * 14;
 const COOKIE_NAME = "frame_session";
@@ -127,6 +127,8 @@ export async function rateLimit(request: Request, action: string, subject = "", 
     await db.prepare("DELETE FROM auth_limits WHERE window_end < ?").bind(now).run();
     await db.prepare("DELETE FROM sessions WHERE expires_at < ?").bind(now).run();
     await db.prepare("DELETE FROM password_resets WHERE expires_at < ?").bind(now).run();
+    await db.prepare("DELETE FROM oauth_sessions WHERE expires_at < ?").bind(now).run();
+    await db.prepare("DELETE FROM oauth_requests WHERE expires_at < ?").bind(now).run();
   }
 }
 
@@ -148,10 +150,24 @@ export async function startSession(request: Request, user: UserRow | Omit<UserRo
   return json({ user: { id: user.id, name: user.name, email: user.email, provider: "email" } }, 200, { "Set-Cookie": sessionCookie(request, token, SESSION_SECONDS) });
 }
 
+export async function startOAuthSession(request: Request, user: AppUser): Promise<Response> {
+  const token = randomToken();
+  await database().prepare("INSERT INTO oauth_sessions (token_hash, account_id, expires_at) VALUES (?, ?, ?)")
+    .bind(await digest(token), user.id, Date.now() + SESSION_SECONDS * 1000).run();
+  return json({ user }, 200, { "Set-Cookie": sessionCookie(request, token, SESSION_SECONDS) });
+}
+
 export async function endSession(request: Request): Promise<Response> {
   sameOrigin(request);
   const token = sessionToken(request);
-  if (token) await database().prepare("DELETE FROM sessions WHERE token_hash = ?").bind(await digest(token)).run();
+  if (token) {
+    const db = database();
+    const hash = await digest(token);
+    await db.batch([
+      db.prepare("DELETE FROM sessions WHERE token_hash = ?").bind(hash),
+      db.prepare("DELETE FROM oauth_sessions WHERE token_hash = ?").bind(hash),
+    ]);
+  }
   return json({ ok: true }, 200, { "Set-Cookie": sessionCookie(request, "", 0) });
 }
 
@@ -162,6 +178,10 @@ export async function currentUser(request: Request): Promise<AppUser | null> {
       JOIN users u ON u.id = s.user_id WHERE s.token_hash = ? AND s.expires_at > ?`)
       .bind(await digest(token), Date.now()).first<{ id: string; name: string; email: string }>();
     if (row) return { ...row, provider: "email" };
+    const social = await database().prepare(`SELECT a.id, a.name, a.email, a.provider FROM oauth_sessions s
+      JOIN oauth_accounts a ON a.id = s.account_id WHERE s.token_hash = ? AND s.expires_at > ?`)
+      .bind(await digest(token), Date.now()).first<{ id: string; name: string; email: string; provider: "google" | "facebook" }>();
+    if (social && (social.provider === "google" || social.provider === "facebook")) return social;
   }
   const platform = await getChatGPTUser();
   return platform ? { id: `chatgpt:${platform.userId}`, name: platform.displayName, email: platform.email, provider: "chatgpt" } : null;

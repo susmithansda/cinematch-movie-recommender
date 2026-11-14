@@ -1,4 +1,4 @@
-﻿# FRAME — find your next obsession
+# FRAME — the movie club
 
 A complete movie discovery app with a cinematic responsive interface, live movie metadata, secure accounts, and personal watchlists.
 
@@ -6,10 +6,10 @@ A complete movie discovery app with a cinematic responsive interface, live movie
 
 - Live Apple movie charts and title search without an API key, with ten-minute server caching and explicit source/outage labels.
 - Optional TMDB integration for theatrical now-playing, upcoming releases, review scores, and official trailers.
-- Genre and mood discovery, country selection, sorting, search, load-more pagination, and recommendations ranked by watchlist genres.
+- Hollywood and Bollywood/Hindi browsing, genre and mood discovery, country selection, sorting, search, load-more pagination, and recommendations ranked by watchlist genres. Film language is independent of storefront region.
 - High-resolution artwork, animated cards, featured-film carousel, accessible dialogs, keyboard search, reduced-motion support, and mobile navigation.
 - Movie details with YouTube trailers or Apple video previews and matching store links. Full films are not hosted.
-- Email/password registration and login, native ChatGPT sign-in on Sites, persistent private watchlists, and sign-out.
+- Email/password registration and login, Google and Facebook OAuth, persistent private watchlists, and sign-out. The in-app sign-in screen has no ChatGPT button.
 - Expiring single-use password-reset links delivered through Resend when configured.
 - Cinematic, lo-fi, and ambient music synthesized in the browser. Audio starts only when requested; no third-party music subscription or copyrighted audio download is required.
 
@@ -30,12 +30,13 @@ For a fresh checkout, build once and initialize its empty local D1 database befo
 npm ci
 npm run build
 node --import ./scripts/sites-env.mjs ./node_modules/wrangler/bin/wrangler.js d1 execute DB --local --config dist/server/wrangler.json --persist-to .wrangler/state --file drizzle/0000_mushy_human_fly.sql
+node --import ./scripts/sites-env.mjs ./node_modules/wrangler/bin/wrangler.js d1 execute DB --local --config dist/server/wrangler.json --persist-to .wrangler/state --file drizzle/0001_icy_xavin.sql
 npm run dev
 ```
 
 Run the SQL command only for a fresh database. Local development accounts and data stay in the ignored `.wrangler/` directory and are separate from production.
 
-The development-only native ChatGPT option uses the starter's loopback mock identity. Email accounts are real local accounts backed by the local database.
+Email and social accounts use the local database during development. The hosted Site retains its existing private audience policy independently of FRAME's account forms.
 
 ## Provider configuration
 
@@ -46,6 +47,8 @@ Copy `.dev.vars.example` to the ignored `.dev.vars` and fill in the needed value
 | `TMDB_READ_ACCESS_TOKEN` | Optional; adds TMDB theatrical release discovery, upcoming movies and ratings. |
 | `RESEND_API_KEY` | Required for password-reset email delivery. |
 | `AUTH_FROM_EMAIL` | Verified Resend sender, for example `FRAME <accounts@your-domain.com>`. |
+| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | Enables Google sign-in after registering an OAuth web app and its exact callback URL. |
+| `FACEBOOK_CLIENT_ID`, `FACEBOOK_CLIENT_SECRET` | Enables Facebook sign-in after registering a Meta app and its exact callback URL. |
 
 Restart local development after changing these values. Hosted values belong in Sites environment settings and require a new deployment to take effect. Never put secrets in browser code or the hosting manifest.
 
@@ -61,7 +64,7 @@ npm test
 npm run build
 ```
 
-The 12 automated tests execute actual auth/watchlist/provider functions against SQLite and controlled upstream fixtures. They cover secure sessions, account isolation, password-reset expiry and replay, CSRF, rate limiting, movie-provider schemas, outages, and artwork resizing.
+Automated tests execute actual auth/watchlist/OAuth/provider functions against SQLite and controlled upstream fixtures. They cover secure sessions, account isolation, password-reset expiry and replay, OAuth state and profile validation, CSRF, rate limiting, Hindi/English original-language filtering, provider outages, and artwork resizing.
 
 For a running local server, optional integration checks are available:
 

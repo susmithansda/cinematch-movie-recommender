@@ -32,6 +32,8 @@ function sanitizedMovie(value: unknown): Record<string, unknown> {
     language: text(movie.language, 20),
     source: text(movie.source, 50),
     storeUrl: mediaUrl(movie.storeUrl),
+    industry: ["hollywood", "bollywood", "international"].includes(String(movie.industry)) ? movie.industry : undefined,
+    originalLanguage: text(movie.originalLanguage, 12),
   };
 }
 

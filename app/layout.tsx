@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import "./editorial.css";
 
 export const metadata: Metadata = {
-  title: "FRAME — Find your next obsession",
-  description: "A little less scrolling. A lot more cinema. Discover movies for every mood, explore live releases, and curate your next movie night.",
+  title: "FRAME — The Movie Club",
+  description: "From Mumbai to Los Angeles. Explore Hollywood and Hindi Bollywood films, find a story for your mood, and save a watchlist for a good evening.",
   icons: {
     icon: "/favicon.svg",
     shortcut: "/favicon.svg",

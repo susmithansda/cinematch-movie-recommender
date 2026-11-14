@@ -4,3 +4,10 @@ TMDB_READ_ACCESS_TOKEN=
 # Required to send password-reset email. Use a sender verified in Resend.
 RESEND_API_KEY=
 AUTH_FROM_EMAIL=
+
+# Optional social sign-in. These are server-only credentials, never browser keys.
+# Configure the exact /api/auth/oauth/{provider}/callback URI in each provider app.
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
+FACEBOOK_CLIENT_ID=
+FACEBOOK_CLIENT_SECRET=

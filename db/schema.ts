@@ -1,4 +1,4 @@
-import { index, integer, primaryKey, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { index, integer, primaryKey, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 
 export const users = sqliteTable("users", {
   id: text("id").primaryKey(),
@@ -32,3 +32,27 @@ export const watchlist = sqliteTable("watchlist", {
   movieJson: text("movie_json").notNull(),
   createdAt: integer("created_at").notNull(),
 }, (table) => [primaryKey({ columns: [table.ownerId, table.movieId] })]);
+
+// Social identities stay separate from password accounts, even when emails match.
+// Only the provider's immutable account identifier can select an OAuth account.
+export const oauthAccounts = sqliteTable("oauth_accounts", {
+  id: text("id").primaryKey(),
+  provider: text("provider").notNull(),
+  subject: text("subject").notNull(),
+  name: text("name").notNull(),
+  email: text("email").notNull(),
+  createdAt: integer("created_at").notNull(),
+}, (table) => [uniqueIndex("oauth_accounts_provider_subject_idx").on(table.provider, table.subject)]);
+
+export const oauthSessions = sqliteTable("oauth_sessions", {
+  tokenHash: text("token_hash").primaryKey(),
+  accountId: text("account_id").notNull().references(() => oauthAccounts.id, { onDelete: "cascade" }),
+  expiresAt: integer("expires_at").notNull(),
+}, (table) => [index("oauth_sessions_account_idx").on(table.accountId), index("oauth_sessions_expiry_idx").on(table.expiresAt)]);
+
+export const oauthRequests = sqliteTable("oauth_requests", {
+  stateHash: text("state_hash").primaryKey(),
+  provider: text("provider").notNull(),
+  codeVerifier: text("code_verifier").notNull(),
+  expiresAt: integer("expires_at").notNull(),
+}, (table) => [index("oauth_requests_expiry_idx").on(table.expiresAt)]);

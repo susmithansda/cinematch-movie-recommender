@@ -7,5 +7,9 @@ declare namespace Cloudflare {
     TMDB_API_KEY?: string;
     TMDB_ACCESS_TOKEN?: string;
     TMDB_READ_ACCESS_TOKEN?: string;
+    GOOGLE_CLIENT_ID?: string;
+    GOOGLE_CLIENT_SECRET?: string;
+    FACEBOOK_CLIENT_ID?: string;
+    FACEBOOK_CLIENT_SECRET?: string;
   }
 }

@@ -14,6 +14,7 @@ const source = readFileSync(new URL("../lib/movie-provider.ts", import.meta.url)
   .replace('"./movies"', JSON.stringify(movieUrl))
   .replace('await import("cloudflare:workers")', "{ env: globalThis.__frameMovieTest.env }");
 const provider = await import(moduleUrl(compile(source)));
+const dateAt = (days) => new Date(Date.now() + days * 86400000).toISOString().slice(0, 10);
 const appleMovie = {
   kind: "feature-movie", trackId: 12345, trackName: "A Future Film", releaseDate: "2026-05-01T00:00:00Z",
   primaryGenreName: "Sci-Fi & Fantasy", trackTimeMillis: 7200000,
@@ -36,7 +37,7 @@ test("Apple results preserve unavailable ratings and normalize artwork, duration
     assert.equal(request.searchParams.get("country"), "in");
     return Response.json({ results: [appleMovie, { ...appleMovie, kind: "song", trackId: 678 }] });
   });
-  const result = await provider.getMovieCatalog({ q: "fixture-schema", genre: "Sci-Fi", country: "IN" });
+  const result = await provider.getMovieCatalog({ q: "future", genre: "Sci-Fi", country: "IN" });
   assert.equal(result.live, true);
   assert.equal(result.source, "Apple iTunes");
   assert.equal(result.movies.length, 1);
@@ -53,12 +54,12 @@ test("a live chart keeps the latest tab useful when Apple's current-year search 
   context.mock.method(globalThis, "fetch", async (url) => {
     calls.push(url);
     return Response.json(String(url).includes("/search?") ? { resultCount: 0, results: [] } : {
-      feed: { entry: [feedEntry(1, "Earlier movie", "2025-03-01"), feedEntry(2, "Newer movie", "2026-06-01")] },
+      feed: { entry: [feedEntry(1, "Earlier movie", "2020-03-01"), feedEntry(2, "Newer movie", dateAt(-10))] },
     });
   });
   const result = await provider.getMovieCatalog({ category: "latest", country: "CA" });
   assert.equal(result.live, true);
-  assert.deepEqual(result.movies.map((movie) => movie.title), ["Newer movie", "Earlier movie"]);
+  assert.deepEqual(result.movies.map((movie) => movie.title), ["Newer movie"], "historical chart entries are excluded from latest");
   assert.equal(result.movies[0].poster, "https://is1-ssl.mzstatic.com/image/thumb/movie/UNI_Title_600x900bb.png/600x900bb.png");
   assert.equal(result.movies[0].trailer, "https://video.apple.com/preview.m4v");
   assert.equal(calls.length, 2);
@@ -88,7 +89,7 @@ test("TMDB supplies real ratings and excludes already released titles from upcom
     assert.equal(options.headers.Authorization, "Bearer test-placeholder-token");
     assert.equal(new URL(url).searchParams.get("region"), "AU");
     return Response.json({ results: [
-      { id: 10, title: "Future release", release_date: "2099-01-01", genre_ids: [878], vote_count: 10, vote_average: 8.2, poster_path: "/movie.jpg" },
+      { id: 10, title: "Future release", release_date: dateAt(30), genre_ids: [878], vote_count: 10, vote_average: 8.2, poster_path: "/movie.jpg", original_language: "en" },
       { id: 11, title: "Historical release", release_date: "2000-01-01", genre_ids: [878], vote_count: 0, vote_average: 0 },
     ] });
   });
@@ -98,6 +99,99 @@ test("TMDB supplies real ratings and excludes already released titles from upcom
   assert.equal(result.movies.length, 1);
   assert.equal(result.movies[0].rating, 8.2);
   assert.deepEqual(result.movies[0].genres, ["Science Fiction"]);
+});
+
+test("the Hindi shelf contains twelve real Hindi originals with distinct IDs, posters and trailers", async () => {
+  const { BOLLYWOOD_MOVIES, FALLBACK_MOVIES } = await import(movieUrl);
+  assert.equal(BOLLYWOOD_MOVIES.length, 12);
+  assert.equal(new Set(FALLBACK_MOVIES.map((movie) => movie.id)).size, FALLBACK_MOVIES.length);
+  assert.ok(BOLLYWOOD_MOVIES.every((movie) => movie.originalLanguage === "hi" && movie.industry === "bollywood" && movie.language === "Hindi"));
+  assert.ok(BOLLYWOOD_MOVIES.every((movie) => movie.poster.startsWith("https://") && movie.trailer?.startsWith("https://") && movie.rating === null));
+});
+
+test("Apple Bollywood browsing uses the selected region and excludes Hindi-dubbed Telugu and Marathi originals", async (context) => {
+  context.mock.method(globalThis, "fetch", async (url) => {
+    assert.ok(String(url).includes("/us/rss/topmovies/limit=100/genre=4431/json"));
+    return Response.json({ feed: { entry: [
+      feedEntry(101, "Dangal", "2016-12-21"),
+      feedEntry(102, "Raees", "2017-01-25"),
+      feedEntry(103, "Baahubali - The Beginning (Hindi Version)", "2015-07-10"),
+      feedEntry(104, "Sairat", "2016-04-29"),
+    ] } });
+  });
+  const result = await provider.getMovieCatalog({ industry: "bollywood", country: "US" });
+  assert.equal(result.live, true);
+  assert.deepEqual(result.movies.map((movie) => movie.title), ["Dangal", "Raees"]);
+  assert.ok(result.movies.every((movie) => movie.originalLanguage === "hi" && movie.industry === "bollywood"));
+});
+
+test("industry, title search, and genre filters work together when Apple's search is empty", async (context) => {
+  context.mock.method(globalThis, "fetch", async (url) => Response.json(String(url).includes("/search?") ? { results: [] } : {
+    feed: { entry: [feedEntry(201, "Dangal", "2016-12-21"), feedEntry(202, "Pathaan", "2023-01-25")] },
+  }));
+  const result = await provider.getMovieCatalog({ industry: "bollywood", q: "Dangal", genre: "Drama", country: "GB" });
+  assert.equal(result.movies.length, 1);
+  assert.equal(result.movies[0].title, "Dangal");
+  assert.equal(result.movies[0].originalLanguage, "hi");
+});
+
+test("Hollywood does not infer English originals from an Indian or US storefront", async (context) => {
+  context.mock.method(globalThis, "fetch", async (url) => {
+    assert.ok(String(url).includes("/in/rss/topmovies/"));
+    return Response.json({ feed: { entry: [
+      feedEntry(301, "Dune: Part Two", "2024-03-01"),
+      feedEntry(302, "Parasite", "2019-05-30"),
+      feedEntry(303, "Dangal", "2016-12-21"),
+      feedEntry(304, "Unknown original language", "2026-01-01"),
+    ] } });
+  });
+  const result = await provider.getMovieCatalog({ industry: "hollywood", country: "IN" });
+  assert.deepEqual(result.movies.map((movie) => movie.title), ["Dune: Part Two"]);
+  assert.ok(result.movies.every((movie) => movie.originalLanguage === "en" && movie.industry === "hollywood"));
+});
+
+test("TMDB Hindi discovery combines original language, region, genre, and real current-release windows", async (context) => {
+  fixture.env.TMDB_READ_ACCESS_TOKEN = "test-placeholder-token";
+  context.after(() => { delete fixture.env.TMDB_READ_ACCESS_TOKEN; });
+  context.mock.method(globalThis, "fetch", async (url) => {
+    const request = new URL(url);
+    assert.equal(request.pathname, "/3/discover/movie");
+    assert.equal(request.searchParams.get("with_original_language"), "hi");
+    assert.equal(request.searchParams.get("region"), "CA");
+    assert.equal(request.searchParams.get("with_genres"), "28");
+    assert.equal(request.searchParams.get("with_release_type"), "2|3");
+    assert.equal(request.searchParams.get("release_date.lte"), dateAt(0));
+    return Response.json({ results: [
+      { id: 401, title: "Current Hindi release", release_date: dateAt(-4), genre_ids: [28], original_language: "hi" },
+      { id: 402, title: "Tamil original in Hindi dub", release_date: dateAt(-4), genre_ids: [28], original_language: "ta" },
+      { id: 403, title: "Historical Hindi film", release_date: "2010-01-01", genre_ids: [28], original_language: "hi" },
+    ] });
+  });
+  const result = await provider.getMovieCatalog({ industry: "bollywood", country: "CA", category: "latest", genre: "Action" });
+  assert.deepEqual(result.movies.map((movie) => movie.title), ["Current Hindi release"]);
+  assert.equal(result.movies[0].originalLanguage, "hi");
+});
+
+test("TMDB search filters original language rather than response localization or title text", async (context) => {
+  fixture.env.TMDB_READ_ACCESS_TOKEN = "test-placeholder-token";
+  context.after(() => { delete fixture.env.TMDB_READ_ACCESS_TOKEN; });
+  context.mock.method(globalThis, "fetch", async (url) => {
+    assert.equal(new URL(url).pathname, "/3/search/movie");
+    return Response.json({ results: [
+      { id: 501, title: "A translated Hindi title", release_date: "2023-01-01", original_language: "te" },
+      { id: 502, title: "Hindi original", release_date: "2023-01-01", original_language: "hi" },
+    ] });
+  });
+  const result = await provider.getMovieCatalog({ industry: "bollywood", q: "fixture original-language search", country: "JP" });
+  assert.deepEqual(result.movies.map((movie) => movie.title), ["Hindi original"]);
+});
+
+test("an offline Hindi collection preserves industry and search filters", async (context) => {
+  context.mock.method(globalThis, "fetch", async () => { throw new Error("offline"); });
+  const result = await provider.getMovieCatalog({ industry: "bollywood", q: "Gully", genre: "Music", country: "DE" });
+  assert.equal(result.live, false);
+  assert.deepEqual(result.movies.map((movie) => movie.title), ["Gully Boy"]);
+  assert.equal(result.movies[0].originalLanguage, "hi");
 });
 
 test("movie details reject unexpected IDs without contacting an external URL", async (context) => {
