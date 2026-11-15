@@ -15,6 +15,13 @@
       "when": 1794678375221,
       "tag": "0001_icy_xavin",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1794680487153,
+      "tag": "0002_powerful_war_machine",
+      "breakpoints": true
     }
   ]
 }

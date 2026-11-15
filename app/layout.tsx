@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import "./editorial.css";
+import "./cinema-club.css";
 
 export const metadata: Metadata = {
   title: "FRAME — The Movie Club",

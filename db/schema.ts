@@ -56,3 +56,14 @@ export const oauthRequests = sqliteTable("oauth_requests", {
   codeVerifier: text("code_verifier").notNull(),
   expiresAt: integer("expires_at").notNull(),
 }, (table) => [index("oauth_requests_expiry_idx").on(table.expiresAt)]);
+
+export const movieDiary = sqliteTable("movie_diary", {
+  ownerId: text("owner_id").notNull(),
+  movieId: text("movie_id").notNull(),
+  movieJson: text("movie_json").notNull(),
+  personalRating: integer("personal_rating"),
+  note: text("note").notNull(),
+  watchedAt: text("watched_at").notNull(),
+  createdAt: integer("created_at").notNull(),
+  updatedAt: integer("updated_at").notNull(),
+}, (table) => [primaryKey({ columns: [table.ownerId, table.movieId] }), index("movie_diary_owner_date_idx").on(table.ownerId, table.watchedAt)]);
