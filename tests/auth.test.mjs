@@ -105,13 +105,16 @@ test("watchlists isolate owners, upsert and sanitize saved movie records", async
   try {
     const alice = await register("alice@example.com");
     const bob = await register("bob@example.com");
-    const movie = { id: "tmdb:123", title: "A Film", year: 2026, genres: ["Drama"], rating: null, duration: 130, poster: "javascript:bad()", overview: "A story", extra: "discard" };
+    const movie = { id: "tmdb:123", title: "A Film", year: 2026, genres: ["Drama"], rating: null, duration: 130, poster: "javascript:bad()", overview: "A story", industry: "bengali", originalLanguage: "bn", searchAliases: ["পথের পাঁচালী", 123, "x".repeat(120)], extra: "discard" };
     assert.equal((await watchlist.PUT(request("/api/watchlist", { movie }, alice.cookie, "PUT"))).status, 200);
     const aliceList = await (await watchlist.GET(request("/api/watchlist", null, alice.cookie, "GET"))).json();
     assert.equal(aliceList.movies.length, 1);
     assert.equal(aliceList.movies[0].poster, "");
     assert.equal(aliceList.movies[0].rating, null);
     assert.equal(aliceList.movies[0].duration, 130);
+    assert.equal(aliceList.movies[0].industry, "bengali");
+    assert.equal(aliceList.movies[0].originalLanguage, "bn");
+    assert.deepEqual(aliceList.movies[0].searchAliases, ["পথের পাঁচালী", "x".repeat(100)]);
     assert.equal(aliceList.movies[0].extra, undefined);
     assert.equal((await (await watchlist.GET(request("/api/watchlist", null, bob.cookie, "GET"))).json()).movies.length, 0);
     await watchlist.DELETE(request("/api/watchlist?id=tmdb%3A123", {}, bob.cookie, "DELETE"));

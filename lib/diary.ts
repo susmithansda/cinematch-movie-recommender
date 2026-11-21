@@ -29,7 +29,7 @@ function sanitizedMovie(value: unknown): Movie {
   const movie = value as Record<string, unknown>;
   const id = movieId(movie.id);
   if (typeof movie.title !== "string" || !movie.title.trim() || movie.title.length > 250) throw new ApiError(400, "A movie title is required.");
-  const industry: MovieIndustry | undefined = movie.industry === "hollywood" || movie.industry === "bollywood" || movie.industry === "international" ? movie.industry : undefined;
+  const industry: MovieIndustry | undefined = movie.industry === "hollywood" || movie.industry === "bollywood" || movie.industry === "bengali" || movie.industry === "international" ? movie.industry : undefined;
   const originalLanguage = typeof movie.originalLanguage === "string" && /^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})?$/.test(movie.originalLanguage) ? movie.originalLanguage.slice(0, 12) : "";
   return {
     id,
@@ -46,6 +46,7 @@ function sanitizedMovie(value: unknown): Movie {
     storeUrl: mediaUrl(movie.storeUrl),
     language: text(movie.language, 20),
     originalLanguage,
+    searchAliases: Array.isArray(movie.searchAliases) ? movie.searchAliases.filter((alias): alias is string => typeof alias === "string").slice(0, 12).map(alias => alias.slice(0, 100)) : [],
     industry,
     source: text(movie.source, 50),
   };

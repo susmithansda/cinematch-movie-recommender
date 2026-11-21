@@ -2,10 +2,11 @@ import type { Metadata } from "next";
 import "./globals.css";
 import "./editorial.css";
 import "./cinema-club.css";
+import "./discovery-studio.css";
 
 export const metadata: Metadata = {
   title: "FRAME — The Movie Club",
-  description: "From Mumbai to Los Angeles. Explore Hollywood and Hindi Bollywood films, find a story for your mood, and save a watchlist for a good evening.",
+  description: "From Bengal to Mumbai and Los Angeles. Discover Bengali, Hindi and Hollywood films, follow your Taste Compass, and curate your own film festival.",
   icons: {
     icon: [
       { url: "/favicon.ico?v=frame-gold-1", type: "image/x-icon", sizes: "16x16 32x32 48x48" },

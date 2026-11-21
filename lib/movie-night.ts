@@ -3,7 +3,7 @@ import type { Movie } from "./movies";
 export type MovieNightMood = "easygoing" | "edge-of-seat" | "heartfelt" | "mind-bending" | "anything";
 export type MovieNightPreferences = {
   mood: MovieNightMood;
-  industry: "all" | "hollywood" | "bollywood";
+  industry: "all" | "hollywood" | "bollywood" | "bengali";
   maxMinutes: number;
   mode: "single" | "double";
   bothWorlds?: boolean;
@@ -78,11 +78,12 @@ function originalLanguage(movie: Movie) {
   if (language) return language;
   if (movie.industry === "bollywood") return "hi";
   if (movie.industry === "hollywood") return "en";
+  if (movie.industry === "bengali") return "bn";
   return "";
 }
 
 function matchesIndustry(movie: Movie, industry: MovieNightPreferences["industry"]) {
-  return industry === "all" || originalLanguage(movie) === (industry === "bollywood" ? "hi" : "en");
+  return industry === "all" || originalLanguage(movie) === (industry === "bollywood" ? "hi" : industry === "bengali" ? "bn" : "en");
 }
 
 function knownRuntime(movie: Movie): movie is Movie & { duration: number } {
@@ -109,7 +110,7 @@ export function recommendMovieNight(
   watchedIds: Iterable<string> = [],
 ): MovieNightSuggestion[] {
   const { mood, industry, maxMinutes, mode } = preferences;
-  if (!isMood(mood) || !["all", "hollywood", "bollywood"].includes(industry)
+  if (!isMood(mood) || !["all", "hollywood", "bollywood", "bengali"].includes(industry)
     || !["single", "double"].includes(mode) || !Number.isFinite(maxMinutes) || maxMinutes <= 0) return [];
   const limit = preferences.limit === undefined ? 6 : Math.min(24, Math.floor(preferences.limit));
   if (!Number.isFinite(limit) || limit < 1) return [];

@@ -7,6 +7,11 @@ AUTH_FROM_EMAIL=
 
 # Optional social sign-in. These are server-only credentials, never browser keys.
 # Configure the exact /api/auth/oauth/{provider}/callback URI in each provider app.
+# Google client type: Web application. Local authorized redirect URI:
+# http://127.0.0.1:5173/api/auth/oauth/google/callback
+# If opening FRAME on localhost, register this separate redirect URI too:
+# http://localhost:5173/api/auth/oauth/google/callback
+# See AUTH.md for Google Cloud setup. Restart npm run dev after editing .dev.vars.
 GOOGLE_CLIENT_ID=
 GOOGLE_CLIENT_SECRET=
 FACEBOOK_CLIENT_ID=

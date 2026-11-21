@@ -28,7 +28,7 @@ try {
   const initial = await evaluate('({title:document.title,h1:document.querySelector("h1")?.textContent,cards:document.querySelectorAll(".movie-card").length,images:Array.from(document.images).map(i=>({src:i.src,loaded:i.complete&&i.naturalWidth>0})),overflow:document.documentElement.scrollWidth>innerWidth,status:document.querySelector(".data-status")?.textContent})');
   await writeFile(path.join(output, 'desktop.png'), Buffer.from((await call('Page.captureScreenshot', { format: 'png' })).data, 'base64'));
   assert.equal(await evaluate('Boolean(document.querySelector(".sidebar"))'), false, 'There must be no left sidebar');
-  assert.deepEqual(await evaluate('Array.from(document.querySelectorAll(".main-nav>button")).map(b=>b.textContent.replace("हिन्दी","").trim())'), ['Discover', 'Hollywood', 'Bollywood']);
+  assert.deepEqual(await evaluate('Array.from(document.querySelectorAll(".main-nav>button")).map(b=>b.textContent.replace(/[^A-Za-z ]/g,"").trim())'), ['Discover', 'Hollywood', 'Bollywood', 'Bengali', 'Listen']);
   await evaluate('Array.from(document.querySelectorAll(".main-nav>button")).find(b=>b.textContent.includes("Bollywood")).click()');
   for (let i = 0; i < 50; i++) { await wait(400); if (await evaluate('!document.querySelector(".data-status")?.textContent.includes("Finding")')) break; }
   const bollywood = await evaluate('(async()=>{const r=await fetch("/api/movies?industry=bollywood&country=US");const d=await r.json();return {count:d.movies.length,source:d.source,allHindi:d.movies.every(m=>m.industry==="bollywood"&&m.originalLanguage==="hi"),hero:document.querySelector(".hero h2")?.textContent};})()');

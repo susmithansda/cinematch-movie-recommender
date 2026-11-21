@@ -44,6 +44,25 @@ FACEBOOK_CLIENT_ID=your-meta-app-id
 FACEBOOK_CLIENT_SECRET=your-meta-app-secret
 ```
 
+### Enable Google sign-in locally
+
+1. Open [Google Auth Platform](https://console.cloud.google.com/auth/clients) in your Google Cloud project. If it is not configured, choose **Get started** and enter the app name **FRAME — The Movie Club**, your support email, the appropriate audience, and a developer contact email. Review Google's policy before accepting it.
+2. Under **Clients**, choose **Create client**, select **Web application**, and name it **FRAME local development**.
+3. Add this exact **Authorized redirect URI**:
+
+   ```text
+   http://127.0.0.1:5173/api/auth/oauth/google/callback
+   ```
+
+   If you also use `http://localhost:5173`, register `http://localhost:5173/api/auth/oauth/google/callback` as a separate URI. The hostname, port, and path must match the address used to open FRAME. This server-side flow does not require an Authorized JavaScript origin.
+4. Create the client and copy its Client ID and Client Secret into the matching entries in `frame/.dev.vars`. Copy `.dev.vars.example` first if the local file does not exist. Keep the file ignored by Git; do not paste the secret into chat or frontend code.
+5. Restart `npm run dev` from `frame/`, then open [provider status](http://127.0.0.1:5173/api/auth/providers). `"google": true` means both server credentials loaded. This status does not validate the client with Google.
+6. Click **Continue with Google** from either **Sign in** or **Join the club**. The first successful sign-in creates a FRAME account; subsequent sign-ins with the same Google account reuse it. No separate FRAME password is needed.
+
+If Google returns `redirect_uri_mismatch`, compare its reported redirect URI with the client's Authorized redirect URIs. If it returns `invalid_client`, check that both credentials belong to the same Web application client. If Google limits the app's audience during testing, add the intended account under **Audience → Test users** or review the project's publishing settings.
+
+These steps follow [Google's web-server OAuth setup and redirect URI requirements](https://developers.google.com/identity/protocols/oauth2/web-server).
+
 For this deployment, register these exact authorized callback URLs:
 
 - Google: `https://frame-cinema-discovery.merrybasin1.chatgpt.site/api/auth/oauth/google/callback`

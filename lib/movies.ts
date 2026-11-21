@@ -1,8 +1,9 @@
-export type MovieIndustry = "hollywood" | "bollywood" | "international";
+export type MovieIndustry = "hollywood" | "bollywood" | "bengali" | "international";
 
 export type Movie = {
   id: string;
   title: string;
+  searchAliases?: string[];
   year: number;
   releaseDate: string;
   genres: string[];
@@ -255,6 +256,97 @@ export const BOLLYWOOD_MOVIES: Movie[] = [
   },
 ];
 
+/** Bengali-language originals, independently verified against the distributor listings
+ * documented in DATA.md. Unknown theatrical day/month stays empty rather than invented.
+ */
+export const BENGALI_MOVIES: Movie[] = [
+  {
+    id: "seed-8000000001", title: "Pather Panchali", searchAliases: ["পথের পাঁচালী", "Song of the Little Road"], year: 1955, releaseDate: "",
+    genres: ["Drama", "Family"], rating: null, duration: 125,
+    overview: "Young Apu and his sister Durga discover small wonders in rural Bengal as their family faces poverty, change, and the pull of a larger world.",
+    poster: "https://s3.amazonaws.com/criterion-production/films/23ccfeaeb65bdd4286a7e7c6d25358cc/93jvZ2Ir3y2yMF3GPgNuDpnia3lDZh_large.jpg",
+    backdrop: "/bengali-hero.jpg", language: "Bengali", originalLanguage: "bn", industry: "bengali", source: "Curated collection",
+  },
+  {
+    id: "seed-8000000002", title: "Charulata", searchAliases: ["চারুলতা", "The Lonely Wife"], year: 1964, releaseDate: "",
+    genres: ["Drama", "Romance"], rating: null, duration: 119,
+    overview: "In nineteenth-century Kolkata, a lonely woman finds a new creative voice when her husband's literary cousin enters her carefully ordered home.",
+    poster: "https://s3.amazonaws.com/criterion-production/films/b9bbbcd50d8262d2bd069bdac193e5c7/vHOndyO4VUAr6wtDznPWHLjsdqJszf_large.jpg",
+    backdrop: "https://criterion-production.s3.amazonaws.com/carousel-files/6912d9eae4769c5b28ec3be82a5617ad.jpeg", language: "Bengali", originalLanguage: "bn", industry: "bengali", source: "Curated collection",
+  },
+  {
+    id: "seed-8000000003", title: "Baishe Srabon", searchAliases: ["বাইশে শ্রাবণ", "২২শে শ্রাবণ", "Baishey Srabon", "Baishe Shrabon"], year: 2011, releaseDate: "",
+    genres: ["Thriller", "Crime", "Mystery"], rating: null, duration: 138,
+    overview: "A suspended detective and a younger officer follow Bengali poetry through Kolkata's streets to catch a serial killer whose clues conceal a deeply personal mystery.",
+    poster: "https://svf.in/wp-content/uploads/2017/07/Baishey-Srabon-Theatrical-Trailer-Prosenjit-Parambrata-Srijit-Mukherji-2011.jpeg",
+    backdrop: "https://svf.in/wp-content/uploads/2017/07/Baishey-Srabon-Theatrical-Trailer-Prosenjit-Parambrata-Srijit-Mukherji-2011.jpeg",
+    trailer: "https://www.youtube.com/watch?v=o-Az9dxnQF8", language: "Bengali", originalLanguage: "bn", industry: "bengali", source: "Curated collection",
+  },
+  {
+    id: "seed-8000000004", title: "Aparajito", searchAliases: ["অপরাজিত", "The Unvanquished"], year: 1956, releaseDate: "",
+    genres: ["Drama", "Family"], rating: null, duration: 110,
+    overview: "Apu moves from childhood in Varanasi toward student life in Kolkata, while his growing independence changes the bond he shares with his mother.",
+    poster: "https://s3.amazonaws.com/criterion-production/films/4ff67e257c5508dc05db478f1dbde96c/8GCE6Cx9bXU7RWmOxe8sAzgLISwMeX_large.jpg",
+    backdrop: "https://s3.amazonaws.com/criterion-production/carousel-files/fdd5eaf3846a1597d2cb7d6c7af9596a.jpeg", language: "Bengali", originalLanguage: "bn", industry: "bengali", source: "Curated collection",
+  },
+  {
+    id: "seed-8000000005", title: "Apur Sansar", searchAliases: ["অপুর সংসার", "The World of Apu", "Apur Sangsar"], year: 1959, releaseDate: "",
+    genres: ["Drama", "Romance"], rating: null, duration: 106,
+    overview: "An aspiring writer's unexpected marriage opens a new chapter of love and responsibility, completing Apu's journey from childhood toward fatherhood.",
+    poster: "https://s3.amazonaws.com/criterion-production/films/d0a5a4515e021437cc61ea3e1d222187/15ItH9PsTaxYE8ifVgWN06wTyfoLIj_large.jpg",
+    backdrop: "https://s3.amazonaws.com/criterion-production/carousel-files/83aab4f4c4a93c9b35eaa96addc37f87.jpeg", language: "Bengali", originalLanguage: "bn", industry: "bengali", source: "Curated collection",
+  },
+  {
+    id: "seed-8000000006", title: "Mahanagar", searchAliases: ["মহানগর", "The Big City"], year: 1963, releaseDate: "",
+    genres: ["Drama"], rating: null, duration: 135,
+    overview: "A Kolkata homemaker starts working to help her family and discovers a confidence that challenges expectations at home and in the city around her.",
+    poster: "https://s3.amazonaws.com/criterion-production/films/ebb3e6ce6778a7c588010b39cba076a8/GQbiSaCYwPh6PwpaBE6DWBLzID0Aqc_large.jpg",
+    backdrop: "https://criterion-production.s3.amazonaws.com/carousel-files/26df1afd7227a74985914f6b28f7b38a.jpeg", language: "Bengali", originalLanguage: "bn", industry: "bengali", source: "Curated collection",
+  },
+  {
+    id: "seed-8000000007", title: "Jalsaghar", searchAliases: ["জলসাঘর", "The Music Room"], year: 1958, releaseDate: "",
+    genres: ["Drama", "Music"], rating: null, duration: 99,
+    overview: "An aristocrat pours his remaining wealth into grand musical evenings as the society beyond his crumbling estate moves into a different age.",
+    poster: "https://s3.amazonaws.com/criterion-production/films/76594fe18af7f46ead9d75d5379e5d00/Byr6L7Zb6SVm5i9qyNuiwn8h6Ml6co_large.jpg",
+    backdrop: "https://criterion-production.s3.amazonaws.com/carousel-files/10aeaddfdfe67f0df4c9420bfc5ca2f3.jpeg", language: "Bengali", originalLanguage: "bn", industry: "bengali", source: "Curated collection",
+  },
+  {
+    id: "seed-8000000008", title: "Devi", searchAliases: ["দেবী", "The Goddess"], year: 1960, releaseDate: "",
+    genres: ["Drama"], rating: null, duration: 99,
+    overview: "A young woman's life changes when her father-in-law becomes convinced she is divine, placing a family between faith, affection, and devastating expectations.",
+    poster: "https://s3.amazonaws.com/criterion-production/films/41a4603b08ce15c6034852e8f4e43427/xNsamgU90AgSxCEEf6WJUqadV2dfxm_large.jpg",
+    backdrop: "https://criterion-production.s3.amazonaws.com/carousel-files/0KLmc4xQB6nnwJ9Px1j3nsKQGyng04O9y5mo6BWO.jpeg", language: "Bengali", originalLanguage: "bn", industry: "bengali", source: "Curated collection",
+  },
+  {
+    id: "seed-8000000009", title: "Chander Pahar", searchAliases: ["চাঁদের পাহাড়", "Mountains of the Moon"], year: 2013, releaseDate: "",
+    genres: ["Adventure", "Action"], rating: null, duration: 149,
+    overview: "Shankar leaves Bengal for Africa, where a railway job leads him toward wild landscapes, a seasoned explorer, and the lure of a legendary mountain.",
+    poster: "https://svf.in/wp-content/uploads/2017/07/Chander-Pahar-Theatrical-Trailer-Dev-Kamaleswar-Mukherjee-2013.jpeg",
+    backdrop: "https://svf.in/wp-content/uploads/2017/07/MG_0726-1024x637.jpg", trailer: "https://www.youtube.com/watch?v=w54LYEZE5A0", language: "Bengali", originalLanguage: "bn", industry: "bengali", source: "Curated collection",
+  },
+  {
+    id: "seed-8000000010", title: "Rajkahini", searchAliases: ["রাজকাহিনী"], year: 2015, releaseDate: "",
+    genres: ["Drama", "History"], rating: null, duration: 151,
+    overview: "As Partition draws a border through their home, Begum Jaan and the women of her household defend their dignity and the place they have built together.",
+    poster: "https://svf.in/wp-content/uploads/2017/07/Rajkahini-রাজকাহিনী-Official-Trailer-with-Subtitles-Srijit-Mukherji-2015.jpeg",
+    backdrop: "https://svf.in/wp-content/uploads/2017/07/IMG_1406-1024x683.jpg", trailer: "https://www.youtube.com/watch?v=ru4G6EwhK9k", language: "Bengali", originalLanguage: "bn", industry: "bengali", source: "Curated collection",
+  },
+  {
+    id: "seed-8000000011", title: "Hemlock Society", searchAliases: ["হেমলক সোসাইটি"], year: 2012, releaseDate: "",
+    genres: ["Drama", "Romance", "Comedy"], rating: null, duration: 140,
+    overview: "A heartbroken woman meets an eccentric teacher whose unusual institution takes her on a darkly comic journey toward choosing life and reconnecting with others.",
+    poster: "https://svf.in/wp-content/uploads/2017/07/Hemlock-society.jpg",
+    backdrop: "https://svf.in/wp-content/uploads/2017/07/ekhon-onek-raat-1024x683.jpg", trailer: "https://www.youtube.com/watch?v=y9KCaYzHYG0", language: "Bengali", originalLanguage: "bn", industry: "bengali", source: "Curated collection",
+  },
+  {
+    id: "seed-8000000012", title: "Autograph", searchAliases: ["অটোগ্রাফ"], year: 2010, releaseDate: "",
+    genres: ["Drama"], rating: null, duration: 139,
+    overview: "An ambitious director casts a famous actor in a film inspired by Ray's Nayak, but love, celebrity, and ambition begin to blur the boundary between performance and life.",
+    poster: "https://svf.in/wp-content/uploads/2017/07/Autograph.jpg",
+    backdrop: "https://svf.in/wp-content/uploads/2017/07/Auograph-1-1024x685.jpg", trailer: "https://www.youtube.com/watch?v=nWubjFn4ci4", language: "Bengali", originalLanguage: "bn", industry: "bengali", source: "Curated collection",
+  },
+];
+
 export const FALLBACK_MOVIES: Movie[] = [
   ...INTERNATIONAL_COLLECTION.map((movie): Movie => ({
     ...movie,
@@ -262,6 +354,7 @@ export const FALLBACK_MOVIES: Movie[] = [
     originalLanguage: movie.language === "Korean" ? "ko" : "en",
   })),
   ...BOLLYWOOD_MOVIES,
+  ...BENGALI_MOVIES,
 ];
 
 export const MOVIE_GENRES = ["All", "Action", "Adventure", "Animation", "Comedy", "Crime", "Drama", "Family", "Fantasy", "History", "Horror", "Music", "Mystery", "Romance", "Science Fiction", "Thriller"];

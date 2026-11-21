@@ -118,6 +118,24 @@ test("all diary operations require authentication and isolate owners, including 
   } finally { sqlite.close(); }
 });
 
+test("Bengali originals retain bounded native-script search aliases in the private diary", async () => {
+  const sqlite = setup();
+  try {
+    const alice = await member();
+    const response = await routes.PUT(request("PUT", {
+      ...entry,
+      movie: { ...movie, industry: "bengali", language: "Bengali", originalLanguage: "bn", searchAliases: ["পথের পাঁচালী", null, "x".repeat(120), ...Array(20).fill("Pather Panchali")] },
+    }, alice.cookie));
+    assert.equal(response.status, 200);
+    const stored = (await (await routes.GET(request("GET", null, alice.cookie))).json()).entries[0].movie;
+    assert.equal(stored.industry, "bengali");
+    assert.equal(stored.originalLanguage, "bn");
+    assert.equal(stored.searchAliases[0], "পথের পাঁচালী");
+    assert.equal(stored.searchAliases[1], "x".repeat(100));
+    assert.equal(stored.searchAliases.length, 12);
+  } finally { sqlite.close(); }
+});
+
 test("diary validates calendar dates, personal stars, note size, movie identifiers and request origin", async () => {
   const sqlite = setup();
   try {

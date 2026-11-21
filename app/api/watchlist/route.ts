@@ -32,8 +32,9 @@ function sanitizedMovie(value: unknown): Record<string, unknown> {
     language: text(movie.language, 20),
     source: text(movie.source, 50),
     storeUrl: mediaUrl(movie.storeUrl),
-    industry: ["hollywood", "bollywood", "international"].includes(String(movie.industry)) ? movie.industry : undefined,
+    industry: ["hollywood", "bollywood", "bengali", "international"].includes(String(movie.industry)) ? movie.industry : undefined,
     originalLanguage: text(movie.originalLanguage, 12),
+    searchAliases: Array.isArray(movie.searchAliases) ? movie.searchAliases.filter((alias): alias is string => typeof alias === "string").slice(0, 12).map(alias => alias.slice(0, 100)) : [],
   };
 }
 

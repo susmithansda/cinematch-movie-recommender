@@ -13,6 +13,15 @@ const movie = (id, title, duration, genres = ["Drama"], extras = {}) => ({
 });
 const preferences = (extras = {}) => ({ mood: "anything", industry: "all", maxMinutes: 180, mode: "single", ...extras });
 
+test("Bengali planner selection uses Bengali originals rather than a conflicting industry tag", () => {
+  const candidates = [movie("bn", "Bengali Original", 110, ["Drama"], { originalLanguage: "bn", industry: "bengali" }),
+    movie("tag-only", "Known Bengali", 100, ["Drama"], { originalLanguage: undefined, industry: "bengali" }),
+    movie("dub", "Hindi Original", 90, ["Drama"], { originalLanguage: "hi", industry: "bengali" })];
+  const plans = recommendMovieNight(candidates, preferences({ industry: "bengali" }));
+  assert.deepEqual(new Set(plans.map(plan => plan.films[0].id)), new Set(["bn", "tag-only"]));
+  assert.deepEqual(recommendMovieNight(candidates, preferences({ industry: "bengali", mode: "double", bothWorlds: true, maxMinutes: 300 })), []);
+});
+
 test("single features require a positive, known runtime and never exceed the selected budget", () => {
   const candidates = [
     movie("unknown", "Unknown runtime", null), movie("zero", "Zero runtime", 0), movie("negative", "Negative runtime", -5),

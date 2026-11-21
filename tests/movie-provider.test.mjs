@@ -220,3 +220,123 @@ test("TMDB detail trailers choose an official YouTube trailer and reject malform
   assert.equal(movie.duration, 120);
   assert.deepEqual(movie.genres, ["Action"]);
 });
+
+test("Bengali editorial originals have distinct identities, useful runtimes, aliases, and real artwork", async () => {
+  const { BENGALI_MOVIES, FALLBACK_MOVIES } = await import(movieUrl);
+  assert.ok(BENGALI_MOVIES.length >= 12);
+  assert.equal(new Set(FALLBACK_MOVIES.map((movie) => movie.id)).size, FALLBACK_MOVIES.length);
+  assert.ok(BENGALI_MOVIES.every((movie) => movie.originalLanguage === "bn" && movie.industry === "bengali" && movie.language === "Bengali"));
+  assert.ok(BENGALI_MOVIES.every((movie) => movie.rating === null && movie.duration > 0 && movie.searchAliases.length > 0));
+  assert.ok(BENGALI_MOVIES.every((movie) => movie.poster.startsWith("https://") && (movie.backdrop.startsWith("https://") || movie.backdrop === "/bengali-hero.jpg")));
+  assert.deepEqual(BENGALI_MOVIES.slice(0, 3).map((movie) => movie.title), ["Pather Panchali", "Charulata", "Baishe Srabon"]);
+  assert.ok(readFileSync(new URL("../public/bengali-hero.jpg", import.meta.url)).length > 1024);
+  assert.equal((await provider.getMovieDetail("seed-8000000001")).title, "Pather Panchali");
+});
+
+test("Apple Bengali originals are independent of country, broad genres, and dubbed edition labels", async (context) => {
+  context.mock.method(globalThis, "fetch", async (url) => {
+    assert.ok(String(url).includes("/us/rss/topmovies/"));
+    assert.ok(!String(url).includes("genre=4431"));
+    return Response.json({ feed: { entry: [
+      feedEntry(601, "Charulata", "1964-04-17"),
+      feedEntry(602, "অপরাজিত", "1956-10-11"),
+      feedEntry(603, "Dangal", "2016-12-21"),
+      feedEntry(604, "Pather Panchali (Hindi Dubbed)", "1955-08-26"),
+      feedEntry(605, "Pather Panchali (Hindi)", "1955-08-26"),
+      feedEntry(606, "Unknown Bengali audio edition", "2025-01-01"),
+      feedEntry(607, "Devi", "2016-01-01"),
+    ] } });
+  });
+  const result = await provider.getMovieCatalog({ industry: "bengali", country: "US" });
+  assert.equal(result.live, true);
+  assert.deepEqual(result.movies.map((movie) => movie.title), ["Charulata", "অপরাজিত"]);
+  assert.ok(result.movies.every((movie) => movie.originalLanguage === "bn" && movie.industry === "bengali"));
+  assert.ok(result.movies[1].searchAliases.includes("Aparajito"));
+  assert.match(result.notice, /Bengali-language originals/);
+});
+
+test("Bengali script and English aliases search the curated collection with genre and region", async (context) => {
+  context.mock.method(globalThis, "fetch", async (url) => Response.json(String(url).includes("/search?") ? { results: [] } : { feed: { entry: [] } }));
+  for (const [q, genre, title] of [
+    ["পথের পাঁচালী", "Family", "Pather Panchali"],
+    ["চারুলতা", "Romance", "Charulata"],
+    ["The World of Apu", "Romance", "Apur Sansar"],
+    ["Baishe Shrabon", "Mystery", "Baishe Srabon"],
+  ]) {
+    const result = await provider.getMovieCatalog({ industry: "bengali", q, genre, country: "AU" });
+    assert.equal(result.live, false);
+    assert.deepEqual(result.movies.map((movie) => movie.title), [title]);
+    assert.equal(result.movies[0].originalLanguage, "bn");
+  }
+  const noMatch = await provider.getMovieCatalog({ industry: "bengali", q: "চারুলতা", genre: "Horror", country: "AU" });
+  assert.deepEqual(noMatch.movies, [], "the original-language and genre filters are both retained");
+});
+
+test("a keyless Bengali collection honestly falls back when a healthy regional chart has no verified originals", async (context) => {
+  context.mock.method(globalThis, "fetch", async () => Response.json({ feed: { entry: [feedEntry(610, "Dangal", "2016-12-21")] } }));
+  const result = await provider.getMovieCatalog({ industry: "bengali", country: "IN" });
+  assert.equal(result.live, false);
+  assert.equal(result.source, "Curated collection");
+  assert.ok(result.movies.length >= 12);
+  assert.ok(result.movies.every((movie) => movie.originalLanguage === "bn"));
+  assert.match(result.notice, /curated collection of Bengali originals/i);
+  const latest = await provider.getMovieCatalog({ industry: "bengali", category: "latest", country: "FR" });
+  assert.equal(latest.live, false);
+  assert.match(latest.notice, /not a current theatrical release feed/);
+});
+
+test("an offline Bengali collection retains transliterated title and genre filters", async (context) => {
+  context.mock.method(globalThis, "fetch", async () => { throw new Error("offline"); });
+  const result = await provider.getMovieCatalog({ industry: "bengali", q: "Mountains of the Moon", genre: "Adventure", country: "GB" });
+  assert.equal(result.live, false);
+  assert.equal(result.source, "Curated collection");
+  assert.deepEqual(result.movies.map((movie) => movie.title), ["Chander Pahar"]);
+});
+
+test("TMDB Bengali latest and upcoming combine bn, regional releases, genres, and strict date windows", async (context) => {
+  fixture.env.TMDB_READ_ACCESS_TOKEN = "test-placeholder-token";
+  context.after(() => { delete fixture.env.TMDB_READ_ACCESS_TOKEN; });
+  context.mock.method(globalThis, "fetch", async (url) => {
+    const request = new URL(url);
+    assert.equal(request.pathname, "/3/discover/movie");
+    assert.equal(request.searchParams.get("with_original_language"), "bn");
+    assert.equal(request.searchParams.get("region"), "DE");
+    assert.equal(request.searchParams.get("with_genres"), "18");
+    assert.equal(request.searchParams.get("with_release_type"), "2|3");
+    const upcoming = request.searchParams.get("release_date.gte") === dateAt(0);
+    assert.equal(request.searchParams.get("release_date.gte"), upcoming ? dateAt(0) : dateAt(-45));
+    assert.equal(request.searchParams.get("release_date.lte"), upcoming ? dateAt(120) : dateAt(0));
+    return Response.json({ results: [
+      { id: 701, title: "Bengali original from Bangladesh", original_title: "বাংলা ছবি", release_date: dateAt(upcoming ? 30 : -3), genre_ids: [18], original_language: "bn", origin_country: ["BD"] },
+      { id: 702, title: "বাংলা নামের হিন্দি ছবি", release_date: dateAt(upcoming ? 30 : -3), genre_ids: [18], original_language: "hi", industry: "bengali" },
+      { id: 703, title: "Wrong release window", release_date: upcoming ? dateAt(-1) : "1964-04-17", genre_ids: [18], original_language: "bn" },
+      { id: 704, title: "Wrong genre", release_date: dateAt(upcoming ? 30 : -3), genre_ids: [27], original_language: "bn" },
+    ] });
+  });
+  for (const category of ["latest", "upcoming"]) {
+    const result = await provider.getMovieCatalog({ industry: "bengali", country: "DE", category, genre: "Drama" });
+    assert.equal(result.live, true);
+    assert.equal(result.source, "TMDB");
+    assert.deepEqual(result.movies.map((movie) => movie.title), ["Bengali original from Bangladesh"]);
+    assert.equal(result.movies[0].language, "Bengali");
+    assert.deepEqual(result.movies[0].searchAliases, ["বাংলা ছবি"]);
+  }
+});
+
+test("TMDB Bengali search excludes translated Hindi and English originals", async (context) => {
+  fixture.env.TMDB_READ_ACCESS_TOKEN = "test-placeholder-token";
+  context.after(() => { delete fixture.env.TMDB_READ_ACCESS_TOKEN; });
+  context.mock.method(globalThis, "fetch", async (url) => {
+    const request = new URL(url);
+    assert.equal(request.pathname, "/3/search/movie");
+    assert.equal(request.searchParams.get("query"), "বাঙালি গল্প");
+    assert.equal(request.searchParams.get("region"), "CA");
+    return Response.json({ results: [
+      { id: 801, title: "An English display title", release_date: "2020-01-01", original_language: "bn" },
+      { id: 802, title: "বাংলা অনুবাদ", release_date: "2020-01-01", original_language: "hi" },
+      { id: 803, title: "Bengali dubbed Hollywood film", release_date: "2020-01-01", original_language: "en" },
+    ] });
+  });
+  const result = await provider.getMovieCatalog({ industry: "bengali", q: "বাঙালি গল্প", country: "CA" });
+  assert.deepEqual(result.movies.map((movie) => movie.title), ["An English display title"]);
+});

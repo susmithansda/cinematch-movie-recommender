@@ -9,9 +9,10 @@ const GENRES: Record<string, number> = {
   Drama: 18, Family: 10751, Fantasy: 14, History: 36, Horror: 27, Music: 10402,
   Mystery: 9648, Romance: 10749, "Science Fiction": 878, Thriller: 53, War: 10752, Western: 37,
 };
-const LANGUAGE_NAMES: Record<string, string> = { en: "English", hi: "Hindi", ko: "Korean", ta: "Tamil", te: "Telugu", ml: "Malayalam", mr: "Marathi", kn: "Kannada", fr: "French", es: "Spanish", ja: "Japanese", zh: "Chinese" };
-const industryFor = (language: string): MovieIndustry | undefined => language === "hi" ? "bollywood" : language === "en" ? "hollywood" : language ? "international" : undefined;
-const titleKey = (title: string) => title.toLowerCase().normalize("NFKD").replace(/[\u0300-\u036f]/g, "").replace(/\([^)]*\)/g, "").replace(/[^a-z0-9]/g, "");
+const LANGUAGE_NAMES: Record<string, string> = { en: "English", hi: "Hindi", bn: "Bengali", ko: "Korean", ta: "Tamil", te: "Telugu", ml: "Malayalam", mr: "Marathi", kn: "Kannada", fr: "French", es: "Spanish", ja: "Japanese", zh: "Chinese" };
+const industryFor = (language: string): MovieIndustry | undefined => language === "hi" ? "bollywood" : language === "bn" ? "bengali" : language === "en" ? "hollywood" : language ? "international" : undefined;
+// Keep Unicode marks: removing Bengali vowel signs collapses distinct titles.
+const titleKey = (title: string) => title.toLowerCase().normalize("NFC").replace(/\([^)]*\)/g, "").replace(/[^\p{L}\p{N}\p{M}]/gu, "");
 
 // Apple does not include original language in its Search/RSS schema. These
 // unambiguous title/year pairs supply editorial language metadata; a storefront
@@ -114,14 +115,19 @@ const APPLE_LANGUAGE_REGISTRY: [string, number, string, string[]][] = [
 
 function appleOriginalMetadata(title: string, year: number) {
   const key = titleKey(title);
-  const seed = FALLBACK_MOVIES.find((movie) => titleKey(movie.title) === key && movie.year === year);
-  const entry = APPLE_LANGUAGE_REGISTRY.find(([name, releaseYear]) => titleKey(name) === key && releaseYear === year);
+  // Apple does not distinguish audio versions. A dubbed label is insufficient
+  // evidence for original language, even when its base title matches a seed.
+  const versionLabel = /\b(?:dubbed|dubbing|dub)\b|\((?:hindi|bengali|bangla|tamil|telugu|english)(?:\s+(?:version|audio))?\)/i.test(title);
+  const seed = versionLabel ? undefined : FALLBACK_MOVIES.find((movie) => movie.year === year
+    && [movie.title, ...(movie.searchAliases || [])].some((name) => titleKey(name) === key));
+  const entry = versionLabel ? undefined : APPLE_LANGUAGE_REGISTRY.find(([name, releaseYear]) => titleKey(name) === key && releaseYear === year);
   const originalLanguage = seed?.originalLanguage || entry?.[2];
   return {
     originalLanguage,
     industry: originalLanguage ? industryFor(originalLanguage) : undefined,
     language: originalLanguage ? LANGUAGE_NAMES[originalLanguage] || originalLanguage.toUpperCase() : undefined,
     genres: seed?.genres || entry?.[3] || [],
+    searchAliases: seed ? [seed.title, ...(seed.searchAliases || [])].filter((name) => name !== title) : undefined,
   };
 }
 const text = (value: unknown, fallback = "") => typeof value === "string" ? value : fallback;
@@ -169,6 +175,7 @@ function fromTmdb(value: unknown): Movie | null {
   const originalLanguage = text(m.original_language).toLowerCase();
   return {
     id: `tmdb-${id}`, title, year: Number(releaseDate.slice(0, 4)) || 0, releaseDate, genres,
+    searchAliases: text(m.original_title) && text(m.original_title) !== title ? [text(m.original_title)] : undefined,
     rating: number(m.vote_count) && number(m.vote_count)! > 0 ? number(m.vote_average) : null,
     duration: number(m.runtime), overview: text(m.overview, "A story waiting to be discovered."),
     poster: image(m.poster_path), backdrop: image(m.backdrop_path, "original") || image(m.poster_path, "original"),
@@ -192,6 +199,7 @@ function fromApple(value: unknown): Movie | null {
     poster: art, backdrop: art, trailer: safeUrl(m.previewUrl) || undefined,
     source: "Apple iTunes", storeUrl: safeUrl(m.trackViewUrl) || undefined,
     language: metadata.language, originalLanguage: metadata.originalLanguage, industry: metadata.industry,
+    searchAliases: metadata.searchAliases,
   };
 }
 
@@ -212,19 +220,21 @@ function fromAppleFeed(value: unknown): Movie | null {
     poster: art, backdrop: art, source: "Apple iTunes", storeUrl: safeUrl(object(m.id).label) || undefined,
     trailer: safeUrl(object(preview?.attributes).href) || undefined,
     language: metadata.language, originalLanguage: metadata.originalLanguage, industry: metadata.industry,
+    searchAliases: metadata.searchAliases,
   };
 }
 
 function filtered(movies: Movie[], genre: string, query: string, industry = "all") {
+  const needle = titleKey(query);
   return movies.filter((movie) => (!genre || movie.genres.some((item) => item.toLowerCase().includes(genre.toLowerCase()) || (genre === "Science Fiction" && /sci.fi/i.test(item))))
-    && (industry === "all" || movie.industry === industry)
-    && (!query || `${movie.title} ${movie.genres.join(" ")} ${movie.overview}`.toLowerCase().includes(query.toLowerCase())));
+    && (industry === "all" || (movie.originalLanguage ? industryFor(movie.originalLanguage) : movie.industry) === industry)
+    && (!query || (needle && titleKey(`${movie.title} ${(movie.searchAliases || []).join(" ")} ${movie.genres.join(" ")} ${movie.overview}`).includes(needle))));
 }
 
 async function tmdbCatalog(query: Required<MovieQuery>, token: string): Promise<MovieCatalog> {
   const params = new URLSearchParams({ language: "en-US", page: "1", region: query.country, include_adult: "false" });
   const genreId = GENRES[query.genre];
-  const originalLanguage = query.industry === "bollywood" ? "hi" : query.industry === "hollywood" ? "en" : "";
+  const originalLanguage = query.industry === "bollywood" ? "hi" : query.industry === "bengali" ? "bn" : query.industry === "hollywood" ? "en" : "";
   const dateAt = (days: number) => new Date(Date.now() + days * 86400000).toISOString().slice(0, 10);
   const today = dateAt(0);
   let path = "trending/movie/week";
@@ -253,6 +263,7 @@ async function tmdbCatalog(query: Required<MovieQuery>, token: string): Promise<
   return {
     movies, source: "TMDB", live: true, updatedAt: new Date().toISOString(),
     ...(query.industry === "hollywood" ? { notice: "English-language originals from TMDB. Release region and original language are separate filters." }
+      : query.industry === "bengali" ? { notice: "Bengali-language originals from TMDB. Release region is independent of original language; dubbed non-Bengali originals are excluded." }
       : query.industry === "bollywood" ? { notice: "Hindi-language originals from TMDB. Dubbed Tamil, Telugu, and other regional originals are excluded." } : {}),
   };
 }
@@ -298,6 +309,7 @@ async function appleCatalog(query: Required<MovieQuery>): Promise<MovieCatalog> 
     return {
       movies: filtered(FALLBACK_MOVIES, query.genre, query.q, query.industry), source: "Curated collection", live: false, updatedAt,
       notice: query.industry === "bollywood" ? "A curated collection of Hindi originals. The live store chart has no verified matching titles in this region."
+        : query.industry === "bengali" ? "A curated collection of Bengali originals, from Ray classics to modern Kolkata stories. The live store chart has no verified matching titles in this region."
         : "A curated collection of English-language originals. The live store chart has no verified matching titles in this region.",
     };
   }
@@ -307,7 +319,12 @@ async function appleCatalog(query: Required<MovieQuery>): Promise<MovieCatalog> 
     const recent = new Date(Date.now() - 180 * 86400000).toISOString().slice(0, 10);
     movies = movies.filter((movie) => movie.releaseDate >= recent && movie.releaseDate <= today).sort((a, b) => b.releaseDate.localeCompare(a.releaseDate));
   }
+  if (!movies.length && query.industry === "bengali") return {
+    movies: filtered(FALLBACK_MOVIES, query.genre, query.q, query.industry), source: "Curated collection", live: false, updatedAt,
+    notice: "No verified recent Bengali originals are available in this store feed. These editorial picks are a curated collection, not a current theatrical release feed.",
+  };
   const scope = query.industry === "bollywood" ? " Only verified Hindi originals are included; Apple's broader Bollywood genre also contains dubs, which are excluded."
+    : query.industry === "bengali" ? " Only verified Bengali-language originals are included; storefront country and dubbed audio do not determine original language."
     : query.industry === "hollywood" ? " Limited to verified English-language originals; the storefront country does not determine a film's original language." : "";
   return {
     movies, source: "Apple iTunes", live: true, updatedAt,
@@ -324,7 +341,7 @@ export async function getMovieCatalog(input: MovieQuery = {}): Promise<MovieCata
     category: ["trending", "latest", "upcoming", "top-rated", "discover"].includes(input.category || "") ? input.category! : "trending",
     genre: normalizedGenre(input.genre), q: (input.q || "").trim().slice(0, 120),
     country: ["US", "IN", "GB", "CA", "AU", "FR", "DE", "JP", "KR"].includes((input.country || "").toUpperCase()) ? input.country!.toUpperCase() : "US",
-    industry: ["hollywood", "bollywood"].includes((input.industry || "").toLowerCase()) ? input.industry!.toLowerCase() : "all",
+    industry: ["hollywood", "bollywood", "bengali"].includes((input.industry || "").toLowerCase()) ? input.industry!.toLowerCase() : "all",
   };
   const token = await tmdbToken();
   const key = `${token ? "tmdb" : "apple"}:${JSON.stringify(query)}`;
