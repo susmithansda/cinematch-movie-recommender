@@ -116,7 +116,11 @@ export async function verifyPassword(value: string, stored: string): Promise<boo
 export async function rateLimit(request: Request, action: string, subject = "", max = 10): Promise<void> {
   const db = database();
   const now = Date.now();
-  const ip = request.headers.get("cf-connecting-ip") ?? "local";
+  const ip = process.env.FRAME_RUNTIME === "node"
+    ? (process.env.VERCEL === "1"
+      ? request.headers.get("x-forwarded-for")?.split(",")[0].trim() || "unknown"
+      : "local")
+    : request.headers.get("cf-connecting-ip") ?? "local";
   const key = await digest(`${action}:${ip}:${subject}`);
   const result = await db.prepare(`INSERT INTO auth_limits (key, count, window_end) VALUES (?, 1, ?)
     ON CONFLICT(key) DO UPDATE SET count = CASE WHEN window_end < ? THEN 1 ELSE count + 1 END,

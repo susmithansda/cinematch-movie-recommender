@@ -2,6 +2,9 @@
 
 A complete movie discovery app with a cinematic responsive interface, live movie metadata, secure accounts, and personal watchlists.
 
+Deploying to Vercel? Follow [VERCEL.md](VERCEL.md). The Vercel configuration
+uses `npm run build:vercel`; the default build below targets Cloudflare.
+
 ## Included
 
 - Live Apple movie charts and title search without an API key, with ten-minute server caching and explicit source/outage labels.
